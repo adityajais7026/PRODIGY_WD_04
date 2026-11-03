@@ -37,15 +37,19 @@ studying, the tools I work with, the projects I've built or am building, and how
 - **Accessibility**: semantic landmarks, correct heading order, visible focus states, alt text,
   `aria-expanded` / `aria-controls` on the menu button, labelled form fields and
   `prefers-reduced-motion` support.
-- **Performance**: no libraries, no web fonts, one small CSS file, one small JS file and a single
-  optimised profile image.
+- **Performance**: no libraries, no build step, one small CSS file, one small JS file and two
+  optimised images (profile photo + a real screenshot of the live Task 02 app for its project card).
+- **UI**: premium light design system — deep navy typography, indigo accent with one restrained
+  violet gradient, subtle dot-texture hero, concept preview panels, refined cards, timeline,
+  hover states and scroll-reveal animations (all disabled under `prefers-reduced-motion`).
 
 ## Technologies
 
 - HTML5
 - CSS3 (custom properties, grid, flexbox, container-free responsive layout)
 - Vanilla JavaScript (IntersectionObserver for scroll-spy and reveal animations)
-- No frameworks, no build tools, no external libraries
+- Google Fonts (Manrope, display=swap) as the only external resource
+- No frameworks, no build tools, no JS libraries
 
 ## Project structure
 
@@ -55,7 +59,8 @@ PRODIGY_WD_04/
 ├── style.css       # Design system, layout and responsive rules
 ├── script.js       # Navigation, scroll-spy, reveal, form handling
 ├── assets/
-│   └── profile.jpg # Profile photo
+│   ├── profile.jpg # Profile photo
+│   └── stopwatch-preview.jpg # Real screenshot of the live Task 02 app
 └── README.md
 ```
 
@@ -82,8 +87,7 @@ No installation or build step is required.
 
 GitHub Pages URL: [https://adityajais7026.github.io/PRODIGY_WD_04/](https://adityajais7026.github.io/PRODIGY_WD_04/)
 
-> Deployment status: not yet verified. This link will only work once GitHub Pages has been enabled
-> for the repository and the first deployment has completed.
+> The site is deployed and served by GitHub Pages from the `main` branch root.
 
 ## Notes
 
