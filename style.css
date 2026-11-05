@@ -455,23 +455,23 @@ textarea {
   max-width: 385px;
 }
 
-/* blurred halo + dotted orbit behind the frame */
+/* balanced halo + dotted orbit behind the frame */
 .hero-visual::before {
   content: "";
   position: absolute;
-  inset: -8%;
+  inset: -14% -12%;
   z-index: -1;
   background:
-    radial-gradient(46% 46% at 70% 24%, rgba(99, 91, 255, 0.28), transparent 70%),
-    radial-gradient(38% 38% at 22% 82%, rgba(124, 58, 237, 0.16), transparent 70%);
-  filter: blur(26px);
+    radial-gradient(56% 52% at 50% 38%, rgba(99, 91, 255, 0.22), transparent 72%),
+    radial-gradient(42% 40% at 50% 88%, rgba(124, 58, 237, 0.14), transparent 70%);
+  filter: blur(24px);
   pointer-events: none;
 }
 
 .portrait-frame {
   position: relative;
-  padding: 10px;
-  border-radius: 32px;
+  padding: 9px;
+  border-radius: 28px;
   background: var(--grad-surface);
   border: 1px solid var(--line);
   box-shadow: var(--shadow-md);
@@ -503,7 +503,7 @@ textarea {
 
 .portrait {
   position: relative;
-  border-radius: 24px;
+  border-radius: 20px;
   overflow: hidden;
   aspect-ratio: 1 / 1;
   background: var(--accent-soft);
@@ -722,6 +722,8 @@ textarea {
 
 .grid-4 {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* content-aware card heights: no stretching to the tallest card */
+  align-items: start;
 }
 
 .grid-3 {
@@ -880,7 +882,7 @@ textarea {
 
 /* -------------------------------- Skills -------------------------------- */
 .skill-card {
-  padding-top: 22px;
+  padding: 20px 22px;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
@@ -910,19 +912,19 @@ textarea {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 0.96rem;
+  font-size: 0.94rem;
   font-weight: 750;
   letter-spacing: -0.01em;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .skill-icon {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   flex: none;
-  border-radius: 10px;
+  border-radius: 9px;
   background: var(--accent-soft);
   color: var(--accent-dark);
   border: 1px solid var(--accent-line);
@@ -1150,6 +1152,7 @@ textarea {
 .project-preview img {
   width: 100%;
   height: 100%;
+  aspect-ratio: 16 / 9;
   object-fit: cover;
   object-position: top center;
   transition: transform 0.45s cubic-bezier(0.22, 0.68, 0.28, 1);
@@ -1217,6 +1220,15 @@ textarea {
   opacity: 0.4;
 }
 
+.project-preview--concept-mg .preview-chrome i {
+  background: rgba(255, 255, 255, 0.45);
+  box-shadow: 0 1px 2px rgba(30, 27, 75, 0.45);
+}
+
+.project-preview--concept-fr .preview-chrome i {
+  background: rgba(79, 70, 229, 0.28);
+}
+
 .project-preview--concept-fr::after {
   background-image: radial-gradient(rgba(79, 70, 229, 0.18) 1px, transparent 1.2px);
   opacity: 0.4;
@@ -1232,6 +1244,24 @@ textarea {
   text-transform: uppercase;
   opacity: 0.75;
   pointer-events: none;
+}
+
+/* fake browser chrome so concept panels read like previews */
+.preview-chrome {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  pointer-events: none;
+}
+
+.preview-chrome i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
 }
 
 .project-preview--concept-mg .preview-scanline {
@@ -1258,17 +1288,17 @@ textarea {
 
 .project-desc {
   font-size: 0.93rem;
-  line-height: 1.72;
+  line-height: 1.7;
   color: var(--ink-soft);
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .project-note {
-  margin-top: 16px;
+  margin-top: 14px;
   padding-left: 12px;
   border-left: 2px solid var(--accent-line);
   font-size: 0.83rem;
-  line-height: 1.65;
+  line-height: 1.62;
   color: var(--muted);
 }
 
@@ -1278,7 +1308,7 @@ textarea {
   gap: 10px;
   align-items: center;
   margin-top: auto;
-  padding-top: 20px;
+  padding-top: 16px;
 }
 
 .link-muted {
