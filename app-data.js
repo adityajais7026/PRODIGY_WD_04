@@ -351,11 +351,34 @@
       .join("");
   }
 
-  function projectPreview(row) {
-    if (row.image_url) {
+  /* Project cards declare their own status label (and, when the repository
+     bundles one, their own screenshot) in the static markup. The projects
+     table has no status column and the schema is deliberately unchanged, so
+     the data layer reuses the markup's label and preview — and lets a stored
+     image_url win whenever one exists. */
+  function staticProjectMeta() {
+    var meta = {};
+    Array.prototype.slice
+      .call(document.querySelectorAll("#projects .project-card"))
+      .forEach(function (card) {
+        var title = card.querySelector(".project-title");
+        if (!title) return;
+        var image = card.querySelector(".project-preview img");
+        var pill = card.querySelector(".project-top .pill");
+        meta[title.textContent.trim().toLowerCase()] = {
+          status: pill ? pill.textContent.trim() : "",
+          preview: image ? image.getAttribute("src") : "",
+        };
+      });
+    return meta;
+  }
+
+  function projectPreview(row, meta) {
+    var stored = row.image_url || meta.preview;
+    if (stored) {
       return (
         '<div class="project-preview"><img src="' +
-        esc(row.image_url) +
+        esc(stored) +
         '" alt="' +
         esc(row.name + " preview") +
         '" width="1280" height="720" loading="lazy" /></div>'
@@ -380,8 +403,11 @@
       return;
     }
 
+    var meta = staticProjectMeta();
+
     grid.innerHTML = rows
       .map(function (row) {
+        var cardMeta = meta[String(row.name || "").trim().toLowerCase()] || {};
         var chips = (row.technologies || []).length
           ? '<ul class="chip-list chip-list-sm" aria-label="Technologies">' +
             row.technologies
@@ -413,11 +439,11 @@
 
         return (
           '<article class="card project-card" data-reveal>' +
-          projectPreview(row) +
+          projectPreview(row, cardMeta) +
           '<div class="project-top"><span class="pill ' +
           (row.featured ? "pill-status" : "pill-soft") +
           '">' +
-          (row.featured ? "Featured" : "Project") +
+          esc(cardMeta.status || (row.featured ? "Featured" : "Project")) +
           "</span></div>" +
           '<h3 class="project-title">' +
           esc(row.name) +
