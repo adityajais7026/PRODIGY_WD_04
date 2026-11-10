@@ -140,43 +140,58 @@
   }
 
   /* ------------------------------------------------------ Scroll reveal --- */
-  var revealItems = Array.prototype.slice.call(document.querySelectorAll("[data-reveal]"));
+  // Exposed as a hook so dynamically rendered content (app-data.js) is
+  // revealed with the same animation instead of staying invisible.
+  function setupReveal() {
+    var revealItems = Array.prototype.slice.call(
+      document.querySelectorAll("[data-reveal]:not([data-reveal-bound])")
+    );
 
-  if (revealItems.length) {
+    if (!revealItems.length) return;
+
+    revealItems.forEach(function (item) {
+      item.setAttribute("data-reveal-bound", "true");
+    });
+
     if (prefersReducedMotion || !("IntersectionObserver" in window)) {
       revealItems.forEach(function (item) {
         item.classList.add("is-visible");
       });
-    } else {
-      // Stagger items that share a grid container.
-      revealItems.forEach(function (item) {
-        var siblings = item.parentElement
-          ? Array.prototype.slice.call(
-              item.parentElement.querySelectorAll(":scope > [data-reveal]")
-            )
-          : [];
-        var index = siblings.indexOf(item);
-        if (index > 0) {
-          item.style.setProperty("--reveal-delay", Math.min(index, 3) * 70 + "ms");
-        }
-      });
-
-      var revealObserver = new IntersectionObserver(
-        function (entries, observer) {
-          entries.forEach(function (entry) {
-            if (!entry.isIntersecting) return;
-            entry.target.classList.add("is-visible");
-            observer.unobserve(entry.target);
-          });
-        },
-        { rootMargin: "0px 0px -8% 0px", threshold: 0.08 }
-      );
-
-      revealItems.forEach(function (item) {
-        revealObserver.observe(item);
-      });
+      return;
     }
+
+    // Stagger items that share a grid container.
+    revealItems.forEach(function (item) {
+      var siblings = item.parentElement
+        ? Array.prototype.slice.call(
+            item.parentElement.querySelectorAll(":scope > [data-reveal]")
+          )
+        : [];
+      var index = siblings.indexOf(item);
+      if (index > 0) {
+        item.style.setProperty("--reveal-delay", Math.min(index, 3) * 70 + "ms");
+      }
+    });
+
+    var revealObserver = new IntersectionObserver(
+      function (entries, observer) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add("is-visible");
+          observer.unobserve(entry.target);
+        });
+      },
+      { rootMargin: "0px 0px -8% 0px", threshold: 0.08 }
+    );
+
+    revealItems.forEach(function (item) {
+      revealObserver.observe(item);
+    });
   }
+
+  setupReveal();
+  window.portfolioRefreshReveal = setupReveal;
+  document.addEventListener("portfolio:content-updated", setupReveal);
 
   /* --------------------------------------------- Profile photo fallback --- */
   var portraitImg = document.querySelector(".portrait img");

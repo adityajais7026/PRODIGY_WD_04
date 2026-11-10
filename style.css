@@ -1788,6 +1788,44 @@ textarea {
   will-change: auto;
 }
 
+/* --------------------------- Dynamic content ----------------------------- */
+/* Neutral concept panel for database projects without a screenshot. */
+.project-preview--db {
+  background: radial-gradient(130% 150% at 20% 0%, #eef0ff 0%, #e3e6fb 55%, #d8dbf7 100%);
+}
+
+.project-preview--db .preview-letter {
+  font-size: clamp(3rem, 8vw, 4.6rem);
+  color: var(--accent);
+  text-shadow: 0 12px 40px rgba(79, 70, 229, 0.25);
+}
+
+.project-preview--db .preview-chrome i {
+  background: rgba(79, 70, 229, 0.28);
+}
+
+.project-preview--db::after {
+  background-image: radial-gradient(rgba(79, 70, 229, 0.18) 1px, transparent 1.2px);
+  opacity: 0.4;
+}
+
+.project-preview--db .preview-scanline {
+  color: var(--accent-dark);
+}
+
+/* Quiet, on-brand empty state used until the dashboard publishes content. */
+.db-empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 18px 20px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-alt);
+  color: var(--muted);
+  font-size: 0.88rem;
+  list-style: none;
+}
+
 /* ------------------------------- Responsive ----------------------------- */
 @media (max-width: 1024px) {
   .container {
