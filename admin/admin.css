@@ -494,7 +494,11 @@ select {
   animation: spin 0.7s linear infinite;
 }
 
-.btn-ghost .spinner,
+.btn-ghost .spinner {
+  border-color: rgba(79, 70, 229, 0.25);
+  border-top-color: var(--accent);
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
