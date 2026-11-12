@@ -19,7 +19,6 @@
   --accent-dark: #4338ca;
   --accent-soft: #eef0ff;
   --accent-line: #d9d8fb;
-  --violet: #7c3aed;
 
   --ok: #067647;
   --ok-soft: #ecfdf3;
@@ -33,7 +32,6 @@
 
   --grad-accent: linear-gradient(96deg, #4f46e5 10%, #7c3aed 85%);
 
-  --radius-sm: 8px;
   --radius: 14px;
   --radius-lg: 22px;
 
@@ -496,8 +494,7 @@ select {
   animation: spin 0.7s linear infinite;
 }
 
-.btn-ghost .spinner,
-.spinner.dark {
+.btn-ghost .spinner {
   border-color: rgba(79, 70, 229, 0.25);
   border-top-color: var(--accent);
 }

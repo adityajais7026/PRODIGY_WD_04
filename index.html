@@ -39,7 +39,7 @@
     rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
   />
-  <link rel="stylesheet" href="style.css?v=20261111" />
+  <link rel="stylesheet" href="style.css?v=20261112" />
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to main content</a>
@@ -116,7 +116,7 @@
             >Résumé</a>
           </div>
 
-          <ul class="social-pills" aria-label="Coding profiles">
+          <ul class="social-pills" aria-label="Coding profiles" data-content="social">
             <li>
               <a
                 class="social-pill"
@@ -196,7 +196,7 @@
         </div>
 
         <div class="about-grid">
-          <div class="about-copy" data-reveal>
+          <div class="about-copy" data-content="about" data-reveal>
             <p>
               I'm a Computer Science and Engineering student at Galgotias University with a strong
               interest in software development, problem solving, and web technologies. I enjoy working
@@ -240,7 +240,7 @@
             </p>
           </div>
 
-          <aside class="about-side" data-reveal aria-label="Education and quick facts">
+          <aside class="about-side" data-content="education" data-reveal aria-label="Education and quick facts">
             <div class="card education-card">
               <p class="card-label">Education</p>
               <h3 class="card-title">B.Tech — Computer Science and Engineering</h3>
@@ -295,7 +295,7 @@
           </p>
         </div>
 
-        <div class="grid grid-4">
+        <div class="grid grid-4" data-content="skills">
           <article class="card skill-card" data-reveal>
             <h3 class="skill-title">
               <span class="skill-icon" aria-hidden="true">
@@ -360,7 +360,7 @@
           </p>
         </div>
 
-        <ol class="timeline">
+        <ol class="timeline" data-content="experience">
           <li class="timeline-item" data-reveal>
             <span class="timeline-marker" aria-hidden="true"></span>
             <div class="card timeline-card">
@@ -410,7 +410,7 @@
           </p>
         </div>
 
-        <div class="grid grid-3 project-grid">
+        <div class="grid grid-3 project-grid" data-content="projects">
           <article class="card project-card" data-reveal>
             <div class="project-preview project-preview--concept project-preview--concept-mg" aria-hidden="true">
               <span class="preview-chrome"><i></i><i></i><i></i></span>
@@ -527,7 +527,7 @@
           </p>
         </div>
 
-        <div class="grid grid-3">
+        <div class="grid grid-3" data-content="achievements">
           <article class="card achievement-card" data-reveal>
             <span class="achievement-mark" aria-hidden="true">75</span>
             <h3 class="achievement-title">75 Days DSA Challenge</h3>
@@ -577,7 +577,7 @@
           <h2 class="section-title" id="profiles-title">Find me online</h2>
         </div>
 
-        <div class="grid grid-3">
+        <div class="grid grid-3" data-content="profiles">
           <a
             class="card profile-card"
             href="https://github.com/adityajais7026"
@@ -670,7 +670,7 @@
 
             <p class="contact-email">
               <span class="contact-email-label">Email</span>
-              <span class="contact-email-value"
+              <span class="contact-email-value" data-content="contact-email"
                 ><a href="mailto:adityaprakash7026@gmail.com">adityaprakash7026@gmail.com</a></span
               >
             </p>
@@ -683,7 +683,7 @@
               Code, coursework and problem solving — pick whichever channel suits you best.
             </p>
 
-            <ul class="contact-links">
+            <ul class="contact-links" data-content="contact-links">
               <li>
                 <a href="https://github.com/adityajais7026" target="_blank" rel="noopener noreferrer">
                   <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -728,7 +728,7 @@
           <p class="footer-copy">© 2026 Aditya Prakash. All rights reserved.</p>
         </div>
       </div>
-      <ul class="footer-links" aria-label="Profile links">
+      <ul class="footer-links" aria-label="Profile links" data-content="footer-links">
         <li>
           <a href="https://github.com/adityajais7026" target="_blank" rel="noopener noreferrer">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -765,6 +765,6 @@
 
   <script src="script.js" defer></script>
   <script src="config.js" defer></script>
-  <script src="app-data.js?v=20261111" defer></script>
+  <script src="app-data.js?v=20261112" defer></script>
 </body>
 </html>

@@ -38,7 +38,6 @@
     toggle.setAttribute("aria-expanded", "true");
     toggle.setAttribute("aria-label", "Close navigation menu");
     nav.classList.add("is-open");
-    document.body.classList.add("menu-open");
   }
 
   function closeMenu(returnFocus) {
@@ -46,7 +45,6 @@
     toggle.setAttribute("aria-expanded", "false");
     toggle.setAttribute("aria-label", "Open navigation menu");
     nav.classList.remove("is-open");
-    document.body.classList.remove("menu-open");
     if (returnFocus) toggle.focus();
   }
 
@@ -140,8 +138,9 @@
   }
 
   /* ------------------------------------------------------ Scroll reveal --- */
-  // Exposed as a hook so dynamically rendered content (app-data.js) is
-  // revealed with the same animation instead of staying invisible.
+  // Re-run through the portfolio:content-updated event so dynamically
+  // rendered content (app-data.js) is revealed with the same animation
+  // instead of staying invisible.
   function setupReveal() {
     var revealItems = Array.prototype.slice.call(
       document.querySelectorAll("[data-reveal]:not([data-reveal-bound])")
@@ -190,7 +189,6 @@
   }
 
   setupReveal();
-  window.portfolioRefreshReveal = setupReveal;
   document.addEventListener("portfolio:content-updated", setupReveal);
 
   /* --------------------------------------------- Profile photo fallback --- */
