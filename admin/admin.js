@@ -37,7 +37,6 @@
     session: null,
     user: null,
     isAdmin: false,
-    route: "overview",
     collection: null,
     rows: [],
     uploads: 0,
@@ -52,7 +51,6 @@
   const crumb = document.getElementById("crumb");
   const toastHost = document.getElementById("toasts");
   const modalHost = document.getElementById("modal-host");
-  const sidebar = document.getElementById("sidebar");
   const scrim = document.getElementById("scrim");
   const menuToggle = document.getElementById("menu-toggle");
   const loginForm = document.getElementById("login-form");
@@ -60,8 +58,6 @@
   const loginSubmit = document.getElementById("login-submit");
 
   /* -------------------------------- Helpers ------------------------------- */
-  const $ = (sel, root = document) => root.querySelector(sel);
-
   function esc(value) {
     return String(value ?? "")
       .replace(/&/g, "&amp;")
@@ -131,7 +127,30 @@
     if (/failed to fetch|networkerror|load failed/i.test(msg))
       return "Cannot reach Supabase — check your internet connection.";
     if (/jwt|token is expired|invalid claim/i.test(msg)) return "Your session expired — please sign in again.";
+    if (/timed out/i.test(msg)) return `${msg} Check your connection and try again.`;
     return msg;
+  }
+
+  /* Every dashboard request is time-boxed: supabase-js has no default timeout,
+     so a stalled connection would otherwise leave a view on "Loading…" forever. */
+  const QUERY_TIMEOUT_MS = 10000;
+
+  function withTimeout(promise, label = "The request") {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(`${label} timed out after ${QUERY_TIMEOUT_MS / 1000}s.`));
+      }, QUERY_TIMEOUT_MS);
+      promise.then(
+        (value) => {
+          clearTimeout(timer);
+          resolve(value);
+        },
+        (error) => {
+          clearTimeout(timer);
+          reject(error);
+        }
+      );
+    });
   }
 
   function toast(message, kind = "success") {
@@ -180,7 +199,10 @@ revoke all on function public.current_admin_state() from public, anon;
 grant  execute on function public.current_admin_state() to authenticated;`;
 
   async function checkAdmin() {
-    const { data, error } = await sb.rpc("current_admin_state");
+    const { data, error } = await withTimeout(
+      sb.rpc("current_admin_state"),
+      "The administrator check"
+    );
     if (error) {
       const text = `${error.message || ""} ${error.details || ""} ${error.code || ""}`;
       if (/PGRST202|could not find the function|does not exist|404/i.test(text)) throw new SetupNeeded(error);
@@ -225,6 +247,7 @@ grant  execute on function public.current_admin_state() to authenticated;`;
 
   loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (loginSubmit.disabled) return; // a sign-in is already in flight
     const email = document.getElementById("login-email").value.trim();
     const password = document.getElementById("login-password").value;
 
@@ -236,7 +259,10 @@ grant  execute on function public.current_admin_state() to authenticated;`;
     authError("");
     setLoginBusy(true);
 
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    const { data, error } = await withTimeout(
+      sb.auth.signInWithPassword({ email, password }),
+      "Signing in"
+    );
     if (error) {
       setLoginBusy(false);
       authError(/invalid login/i.test(error.message) ? "Incorrect email or password." : friendly(error));
@@ -246,7 +272,7 @@ grant  execute on function public.current_admin_state() to authenticated;`;
     try {
       const isAdmin = await checkAdmin();
       if (!isAdmin) {
-        await sb.auth.signOut();
+        await withTimeout(sb.auth.signOut(), "Signing out");
         setLoginBusy(false);
         authError("This account is not on the administrator allowlist. Ask the site owner to add it.");
         return;
@@ -277,7 +303,7 @@ grant  execute on function public.current_admin_state() to authenticated;`;
 
   async function signOut() {
     try {
-      await sb.auth.signOut();
+      await withTimeout(sb.auth.signOut(), "Signing out");
     } catch (_) {
       /* ignore network errors while signing out */
     }
@@ -361,7 +387,6 @@ grant  execute on function public.current_admin_state() to authenticated;`;
       return;
     }
 
-    state.route = route;
     setActiveNav(route);
     crumb.textContent = ROUTES[route];
     closeNav();
@@ -415,7 +440,7 @@ grant  execute on function public.current_admin_state() to authenticated;`;
     for (const rule of cfg.order || []) {
       query = query.order(rule.column, { ascending: rule.ascending !== false, nullsFirst: false });
     }
-    const { data, error } = await query;
+    const { data, error } = await withTimeout(query, `Loading ${cfg.title || cfg.table}`);
     if (error) throw error;
     return data || [];
   }
@@ -423,7 +448,7 @@ grant  execute on function public.current_admin_state() to authenticated;`;
   async function countRows(table, published) {
     let query = sb.from(table).select("id", { count: "exact", head: true });
     if (published !== undefined) query = query.eq("published", published);
-    const { count, error } = await query;
+    const { count, error } = await withTimeout(query, "Counting records");
     if (error) throw error;
     return count || 0;
   }
@@ -447,6 +472,8 @@ grant  execute on function public.current_admin_state() to authenticated;`;
     modalHost.appendChild(backdrop);
     document.body.classList.add("modal-open");
 
+    const previouslyFocused = document.activeElement;
+
     let closed = false;
     const close = () => {
       if (closed) return;
@@ -454,10 +481,48 @@ grant  execute on function public.current_admin_state() to authenticated;`;
       document.removeEventListener("keydown", onKey);
       backdrop.remove();
       document.body.classList.remove("modal-open");
+      if (
+        previouslyFocused &&
+        typeof previouslyFocused.focus === "function" &&
+        document.contains(previouslyFocused)
+      ) {
+        previouslyFocused.focus();
+      }
       if (typeof onClose === "function") onClose();
     };
+
+    const focusableItems = () =>
+      Array.prototype.slice
+        .call(
+          backdrop.querySelectorAll(
+            'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          )
+        )
+        .filter((element) => element.offsetParent !== null);
+
     function onKey(event) {
-      if (event.key === "Escape") close();
+      if (event.key === "Escape") {
+        event.preventDefault();
+        close();
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const items = focusableItems();
+      if (!items.length) return;
+
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+      const outside = !backdrop.contains(active);
+
+      if (event.shiftKey && (outside || active === first)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (outside || active === last)) {
+        event.preventDefault();
+        first.focus();
+      }
     }
     document.addEventListener("keydown", onKey);
     backdrop.addEventListener("click", (event) => {
@@ -1041,7 +1106,10 @@ grant  execute on function public.current_admin_state() to authenticated;`;
       ["social_links", "Social links"],
     ];
 
-    const { data: profile, error: profileError } = await sb.from("profiles").select("*").limit(1).maybeSingle();
+    const { data: profile, error: profileError } = await withTimeout(
+      sb.from("profiles").select("*").limit(1).maybeSingle(),
+      "Loading the profile"
+    );
     if (profileError) throw profileError;
 
     const counts = Object.fromEntries(
@@ -1062,7 +1130,10 @@ grant  execute on function public.current_admin_state() to authenticated;`;
     const recent = (
       await Promise.all(
         recentSources.map(async ([table, kind, title]) => {
-          const { data } = await sb.from(table).select("*").order("updated_at", { ascending: false }).limit(3);
+          const { data } = await withTimeout(
+            sb.from(table).select("*").order("updated_at", { ascending: false }).limit(3),
+            `Loading recent ${table}`
+          );
           return (data || []).map((row) => ({ kind, title: title(row), when: row.updated_at }));
         })
       )
@@ -1177,7 +1248,10 @@ grant  execute on function public.current_admin_state() to authenticated;`;
     state.collection = null;
     view.innerHTML = loading("Loading profile…");
 
-    const { data: profile, error } = await sb.from("profiles").select("*").limit(1).maybeSingle();
+    const { data: profile, error } = await withTimeout(
+      sb.from("profiles").select("*").limit(1).maybeSingle(),
+      "Loading the profile"
+    );
     if (error) throw error;
     if (token !== state.renderSeq) return;
 
@@ -1239,14 +1313,22 @@ grant  execute on function public.current_admin_state() to authenticated;`;
       if (state.uploads > 0) return showFormError(form, "Wait for the upload to finish, then save.");
 
       state.saving = true;
-      const button = view.querySelector('.panel-foot .btn-primary');
+      const button = view.querySelector(".panel-foot .btn-primary");
       if (button) button.disabled = true;
-      const { error: saveError } = await sb.from("profiles").update(buildPayload(PROFILE_FIELDS, values)).eq("id", profile.id);
-      state.saving = false;
-      if (button) button.disabled = false;
-      if (saveError) return showFormError(form, friendly(saveError));
-      toast("Profile saved.");
-      renderProfile().catch(renderError);
+      try {
+        const { error: saveError } = await withTimeout(
+          sb.from("profiles").update(buildPayload(PROFILE_FIELDS, values)).eq("id", profile.id),
+          "Saving the profile"
+        );
+        if (saveError) return showFormError(form, friendly(saveError));
+        toast("Profile saved.");
+        renderProfile().catch(renderError);
+      } catch (error) {
+        showFormError(form, friendly(error));
+      } finally {
+        state.saving = false;
+        if (button) button.disabled = false;
+      }
     });
   }
 
@@ -1259,7 +1341,10 @@ grant  execute on function public.current_admin_state() to authenticated;`;
       danger: true,
     });
     if (!ok) return;
-    const { error } = await sb.from("profiles").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    const { error } = await withTimeout(
+      sb.from("profiles").delete().neq("id", "00000000-0000-0000-0000-000000000000"),
+      "Deleting the profile"
+    );
     if (error) return toast(friendly(error), "error");
     toast("Profile deleted.");
     renderProfile().catch(renderError);
@@ -1275,7 +1360,10 @@ grant  execute on function public.current_admin_state() to authenticated;`;
       submitLabel: "Create profile",
     });
     if (!result) return;
-    const { error } = await sb.from("profiles").insert(buildPayload(PROFILE_FIELDS, result));
+    const { error } = await withTimeout(
+      sb.from("profiles").insert(buildPayload(PROFILE_FIELDS, result)),
+      "Creating the profile"
+    );
     if (error) return toast(friendly(error), "error");
     toast("Profile created.");
     renderProfile().catch(renderError);
@@ -1360,9 +1448,12 @@ grant  execute on function public.current_admin_state() to authenticated;`;
     if (!result) return;
 
     const payload = buildPayload(cfg.fields, result);
-    const { error } = row
-      ? await sb.from(cfg.table).update(payload).eq("id", row.id)
-      : await sb.from(cfg.table).insert(payload);
+    const { error } = await withTimeout(
+      row
+        ? sb.from(cfg.table).update(payload).eq("id", row.id)
+        : sb.from(cfg.table).insert(payload),
+      row ? `Saving the ${cfg.singular}` : `Adding the ${cfg.singular}`
+    );
     if (error) return toast(friendly(error), "error");
     toast(row ? `${cap(cfg.singular)} updated.` : `${cap(cfg.singular)} added.`);
     renderCollection(key).catch(renderError);
@@ -1396,7 +1487,10 @@ grant  execute on function public.current_admin_state() to authenticated;`;
 
     if (button.dataset.toggle) {
       button.disabled = true;
-      const { error } = await sb.from(cfg.table).update({ published: !row.published }).eq("id", row.id);
+      const { error } = await withTimeout(
+        sb.from(cfg.table).update({ published: !row.published }).eq("id", row.id),
+        `Updating the ${cfg.singular}`
+      );
       if (error) {
         button.disabled = false;
         return toast(friendly(error), "error");
@@ -1414,7 +1508,10 @@ grant  execute on function public.current_admin_state() to authenticated;`;
         danger: true,
       });
       if (!ok) return;
-      const { error } = await sb.from(cfg.table).delete().eq("id", row.id);
+      const { error } = await withTimeout(
+        sb.from(cfg.table).delete().eq("id", row.id),
+        `Deleting the ${cfg.singular}`
+      );
       if (error) return toast(friendly(error), "error");
       toast(`${cap(cfg.singular)} deleted.`);
       renderCollection(key).catch(renderError);
@@ -1441,11 +1538,23 @@ grant  execute on function public.current_admin_state() to authenticated;`;
     state.collection = null;
     view.innerHTML = loading("Loading settings…");
 
-    const { data: profile } = await sb.from("profiles").select("*").limit(1).maybeSingle();
+    const { data: profile, error: profileError } = await withTimeout(
+      sb.from("profiles").select("*").limit(1).maybeSingle(),
+      "Loading the profile"
+    );
+    if (profileError) throw profileError;
+
     const bucketChecks = await Promise.all(
       BUCKETS.map(async (bucket) => {
-        const { error } = await sb.storage.from(bucket).list("", { limit: 1 });
-        return { bucket, ok: !error, detail: error ? friendly(error) : "Ready" };
+        try {
+          const { error } = await withTimeout(
+            sb.storage.from(bucket).list("", { limit: 1 }),
+            `Checking the ${bucket} bucket`
+          );
+          return { bucket, ok: !error, detail: error ? friendly(error) : "Ready" };
+        } catch (error) {
+          return { bucket, ok: false, detail: friendly(error) };
+        }
       })
     );
     if (token !== state.renderSeq) return;
@@ -1539,20 +1648,32 @@ grant  execute on function public.current_admin_state() to authenticated;`;
     if (profile) {
       bindUploads(view, [RESUME_FIELD]);
       const resumeForm = view.querySelector("#resume-form");
+      const resumeSubmit = resumeForm.querySelector('button[type="submit"]');
       resumeForm.addEventListener("submit", async (event) => {
         event.preventDefault();
+        if (state.saving) return;
         showFormError(resumeForm, "");
         const value = resumeForm.elements.resume_url.value.trim();
         const problem = validateField(RESUME_FIELD, value);
         if (problem) return showFormError(resumeForm, problem);
         if (state.uploads > 0) return showFormError(resumeForm, "Wait for the upload to finish, then save.");
-        const { error } = await sb
-          .from("profiles")
-          .update({ resume_url: value || null })
-          .eq("id", profile.id);
-        if (error) return showFormError(resumeForm, friendly(error));
-        toast("Résumé saved.");
-        renderSettings().catch(renderError);
+
+        state.saving = true;
+        if (resumeSubmit) resumeSubmit.disabled = true;
+        try {
+          const { error } = await withTimeout(
+            sb.from("profiles").update({ resume_url: value || null }).eq("id", profile.id),
+            "Saving the résumé"
+          );
+          if (error) return showFormError(resumeForm, friendly(error));
+          toast("Résumé saved.");
+          renderSettings().catch(renderError);
+        } catch (error) {
+          showFormError(resumeForm, friendly(error));
+        } finally {
+          state.saving = false;
+          if (resumeSubmit) resumeSubmit.disabled = false;
+        }
       });
     }
 
@@ -1570,12 +1691,21 @@ grant  execute on function public.current_admin_state() to authenticated;`;
       if (next.length < 8) return fail("Use at least 8 characters.");
       if (next !== confirm) return fail("The two passwords do not match.");
       const submit = passwordForm.querySelector("button[type=submit]");
+      if (submit.disabled) return;
       submit.disabled = true;
-      const { error } = await sb.auth.updateUser({ password: next });
-      submit.disabled = false;
-      if (error) return fail(friendly(error));
-      passwordForm.reset();
-      toast("Password updated.");
+      try {
+        const { error } = await withTimeout(
+          sb.auth.updateUser({ password: next }),
+          "Updating the password"
+        );
+        if (error) return fail(friendly(error));
+        passwordForm.reset();
+        toast("Password updated.");
+      } catch (error) {
+        fail(friendly(error));
+      } finally {
+        submit.disabled = false;
+      }
     });
 
     view.querySelector("#signout-here").addEventListener("click", () => signOut());
@@ -1589,7 +1719,7 @@ grant  execute on function public.current_admin_state() to authenticated;`;
       });
       if (!ok) return;
       try {
-        await sb.auth.signOut({ scope: "global" });
+        await withTimeout(sb.auth.signOut({ scope: "global" }), "Signing out");
       } catch (_) {
         /* fall through to local sign-out */
       }
@@ -1600,7 +1730,7 @@ grant  execute on function public.current_admin_state() to authenticated;`;
 
   /* ---------------------------------- Boot --------------------------------- */
   (async function boot() {
-    const { data } = await sb.auth.getSession();
+    const { data } = await withTimeout(sb.auth.getSession(), "Restoring your session");
     if (!data.session) {
       authView.hidden = false;
       return;
@@ -1608,7 +1738,7 @@ grant  execute on function public.current_admin_state() to authenticated;`;
     try {
       const isAdmin = await checkAdmin();
       if (!isAdmin) {
-        await sb.auth.signOut();
+        await withTimeout(sb.auth.signOut(), "Signing out");
         authView.hidden = false;
         authError("This account is not on the administrator allowlist.");
         return;

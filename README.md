@@ -55,8 +55,9 @@ Home (hero) → About → Skills → Experience → Projects → Achievements �
 - **Accessibility** — semantic landmarks, correct heading order, visible focus states, alt text,
   `aria-expanded` / `aria-controls` on the menu button and
   `prefers-reduced-motion` support for all reveal animations.
-- **Performance** — no libraries and no build step; one stylesheet, one small page script, one data
-  layer and two images. Google Fonts (Manrope, `display=swap`) is the only external resource.
+- **Performance** — no libraries and no build step on the public page; one stylesheet, one small
+  page script, one data layer and two images. Google Fonts (Manrope, `display=swap`) is the only
+  external resource there.
 - **Design system** — deep navy typography, indigo accent with a restrained violet gradient, subtle
   dot-texture hero, concept preview panels, refined cards, timeline and hover states.
 
@@ -104,6 +105,87 @@ in `supabase/migrations/` (`0001` core helpers, `0002` content tables, `0003` RL
 storage buckets and policies, `0005` admin RPC). These scripts are kept alongside the project for
 reference and are not part of the deployed page.
 
+Run them in order in the Supabase SQL editor. **`0005` is required by the dashboard**: it creates the
+`public.current_admin_state()` wrapper the browser calls to confirm administrator rights (PostgREST
+only exposes the `public` schema, and the real check lives in `app.is_admin()`). If it is missing,
+`/admin/` shows a setup panel with the exact SQL instead of failing silently.
+
+## Client module contracts
+
+Three cross-script behaviours are intentional and maintained, not accidental:
+
+| Contract | Set by | Read by | Meaning |
+|---|---|---|---|
+| `data-content-source` on `<html>` | `app-data.js` | tests, styles, debugging | `supabase` when every table was read, `partial` when some sections kept their static markup, absent when the page is still fully static (API unavailable or nothing published) |
+| `portfolio:content-updated` event on `document` | `app-data.js` | `script.js` | Fired after database content is rendered; `script.js` re-runs the reveal observer so new cards animate in instead of staying invisible |
+| `data-content="…"` attributes | `index.html` | `app-data.js` | Named render targets — `about`, `education`, `skills`, `experience`, `projects`, `achievements`, `profiles`, `social`, `contact-links`, `footer-links`, `contact-email` — so a renderer never depends on element order |
+
+Reveal animation: `script.js` adds `.js` to `<html>`, which makes `[data-reveal]` start hidden; the
+observer adds `.is-visible` when an element scrolls into view. Any new markup that should animate
+needs the `data-reveal` attribute.
+
+`script.js` also owns navigation, scroll-spy and the portrait image fallback; it never touches
+portfolio content, and `app-data.js` never touches navigation — the two communicate only through the
+two contracts above.
+
+## Storage buckets
+
+| Bucket | Used by | Accepted types | Limit |
+|---|---|---|---|
+| `profile-photos` | Profile → Profile photo | JPEG, PNG, WebP | 5 MB |
+| `project-shots` | Projects → Screenshot | JPEG, PNG, WebP | 8 MB |
+| `certificates` | Achievements → Certificate / image | JPEG, PNG, WebP, PDF | 10 MB |
+| `resume` | Profile and Settings → Résumé | PDF | 5 MB |
+
+Uploads are sent with the signed-in user's access token; the bucket policies in
+`0004_storage_buckets_policies.sql` remain the enforcement. The dashboard uses `XMLHttpRequest` for
+those four fields only because the SDK's `upload()` cannot report progress — everything else goes
+through supabase-js. Replacing a file stores a new object; the previous one is not deleted
+automatically, so older uploads accumulate.
+
+## Cache busting
+
+GitHub Pages serves every asset with `Cache-Control: max-age=600`, so a browser can pair fresh HTML
+with a ten-minute-old stylesheet or data layer. Two references therefore carry a date stamp:
+
+```html
+<link rel="stylesheet" href="style.css?v=20261111" />
+<script src="app-data.js?v=20261111" defer></script>
+```
+
+Bump both to the same `YYYYMMDD` whenever `style.css` or `app-data.js` changes but `index.html` does
+not (editing the HTML already invalidates the page). `index.html` itself is not versioned. The
+dashboard is `noindex` and single-user, so `admin/index.html` loads its CSS and JS unversioned.
+
+## Verification
+
+```bash
+# JavaScript syntax — all four scripts
+node --check app-data.js script.js admin/admin.js tools/pglite-verify.mjs
+
+# Database: migrations (each run twice), RLS as anon / non-admin / allowlisted admin,
+# profile singleton guard, updated_at triggers, storage object policies
+npm install --no-save @electric-sql/pglite
+node tools/pglite-verify.mjs
+```
+
+The database script stubs Supabase's `auth` and `storage` schemas and mirrors its default privileges,
+so it runs against real Postgres (PGlite) without a Supabase project. It is not part of the deployed
+site and needs no `package.json` — the single dev dependency is installed with `--no-save`.
+
+Browser checks that matter here:
+
+- **Database-rendered load** — `<html data-content-source="supabase">`, with the contact card, email
+  and profile links coming from Supabase.
+- **Static fallback** — point `config.js` at an unreachable host: the shipped content must still render
+  and no `data-content-source` attribute should be set.
+- **Partial fallback** — `data-content-source="partial"` means the API answered but at least one table
+  failed; those sections keep their static markup.
+- **Responsive** — 1280 px keeps the two-column contact layout, the public page collapses at 980 px and
+  swaps to the menu button at 900 px, the dashboard sidebar collapses at 980 px.
+- **Requests time out** — public content aborts after 8 s; dashboard queries are capped at 10 s and
+  show the retry panel rather than loading forever.
+
 ## Project structure
 
 ```text
@@ -114,15 +196,19 @@ PRODIGY_WD_04/
 ├── app-data.js             # Public data layer: reads published rows and renders them
 ├── config.js               # Supabase URL + publishable key
 ├── admin/
-│   ├── index.html          # Dashboard shell
+│   ├── index.html          # Dashboard shell (pinned, SRI-checked Supabase SDK)
 │   ├── admin.css           # Dashboard styles
 │   └── admin.js            # Auth, routing, CRUD, uploads
 ├── assets/
 │   ├── profile.jpg         # Portrait fallback (neutral placeholder)
 │   └── stopwatch-preview.jpg  # Screenshot of the live Task 02 app
-├── supabase/migrations/    # Local SQL scripts for the schema and policies
+├── supabase/migrations/    # SQL for the schema, policies and admin RPC
+├── tools/
+│   └── pglite-verify.mjs   # Runs the migrations + RLS checks against real Postgres
 └── README.md
 ```
+
+`artifacts/` (local review screenshots) is listed in `.gitignore` and is never deployed.
 
 ## Run locally
 
@@ -168,7 +254,12 @@ Kept explicit so nothing on the site overstates what exists:
 
 HTML5 · CSS3 (custom properties, grid, flexbox) · vanilla JavaScript (IntersectionObserver) ·
 Supabase (PostgreSQL, PostgREST, Auth, Storage, Row Level Security) · GitHub Pages ·
-Google Fonts. No frameworks, no build tools, no JS libraries.
+Google Fonts.
+
+No frameworks and no build tools. The public page loads no JS libraries at all — `app-data.js` talks
+to PostgREST with `fetch`. The dashboard loads the Supabase JS SDK from jsDelivr pinned to an exact
+version and checked with a Subresource Integrity hash in `admin/index.html`, so a new 2.x release
+cannot change the deployed dashboard without a commit here.
 
 ## Author
 

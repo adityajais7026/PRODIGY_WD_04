@@ -6,12 +6,18 @@
    written here reuses the portfolio's own classes.
 
    Behaviour:
-     * all tables are requested in parallel; any failed request keeps the
-       static content exactly as shipped (graceful fallback),
+     * all tables are requested in parallel and settled independently; a table
+       that fails keeps only its own section's static markup, so one broken
+       endpoint cannot hide the sections that did load,
+     * <html data-content-source> reports "supabase" when every table was read
+       and "partial" when at least one kept its static content,
      * if the database is reachable but contains no published rows at all,
        the static content is also kept (a fresh install is not an empty site),
      * once the database has content, it becomes the source of truth — so
        deletions and unpublishing are reflected on the next page load,
+     * render targets are addressed by their data-content hooks (never by
+       position or by "the last grid"), so markup can move without breaking
+       the renderer,
      * row-level security remains the enforcement: this uses the anon key and
        only ever asks for `published=eq.true`.
    ========================================================================== */
@@ -186,13 +192,13 @@
       }
     }
 
-    var emailValue = document.querySelector(".contact-email-value");
+    var emailValue = document.querySelector('[data-content="contact-email"]');
     if (emailValue && profile.email) {
       emailValue.innerHTML =
         '<a href="mailto:' + esc(profile.email) + '">' + esc(profile.email) + "</a>";
     }
 
-    var copy = document.querySelector(".about-copy");
+    var copy = document.querySelector('[data-content="about"]');
     if (copy && profile.about) {
       var paragraphs = String(profile.about)
         .split(/\n{2,}/)
@@ -250,7 +256,7 @@
   }
 
   function applyEducation(rows) {
-    var side = document.querySelector(".about-side");
+    var side = document.querySelector('[data-content="education"]');
     if (!side) return;
     var facts = side.querySelector(".facts-card");
 
@@ -275,7 +281,7 @@
   }
 
   function applySkills(rows) {
-    var grid = document.querySelector("#skills .grid");
+    var grid = document.querySelector('[data-content="skills"]');
     if (!grid) return;
 
     if (!rows.length) {
@@ -322,7 +328,7 @@
   }
 
   function applyExperience(rows) {
-    var timeline = document.querySelector("#experience .timeline");
+    var timeline = document.querySelector('[data-content="experience"]');
     if (!timeline) return;
 
     if (!rows.length) {
@@ -395,7 +401,7 @@
   }
 
   function applyProjects(rows) {
-    var grid = document.querySelector("#projects .project-grid");
+    var grid = document.querySelector('[data-content="projects"]');
     if (!grid) return;
 
     if (!rows.length) {
@@ -459,8 +465,7 @@
   }
 
   function applyAchievements(rows) {
-    var grids = document.querySelectorAll("#achievements .grid");
-    var grid = grids[grids.length - 1];
+    var grid = document.querySelector('[data-content="achievements"]');
     if (!grid) return;
 
     if (!rows.length) {
@@ -492,84 +497,76 @@
       .join("");
   }
 
+  /* One renderer for the four places a social link appears. The `variant`
+     only changes the wrapper: a pill in the hero, a card in the profiles
+     section, a plain row in the contact card and the footer. */
+  function socialItem(link, variant) {
+    var meta = labelsFor(link);
+    var attributes = 'href="' + esc(link.url) + '" target="_blank" rel="noopener noreferrer"';
+
+    if (variant === "pill") {
+      return (
+        '<li><a class="social-pill" ' +
+        attributes +
+        ">" +
+        meta.icon +
+        "<span>" +
+        esc(meta.label) +
+        "</span></a></li>"
+      );
+    }
+
+    if (variant === "profile") {
+      return (
+        '<a class="card profile-card" ' +
+        attributes +
+        " data-reveal>" +
+        '<span class="profile-icon" aria-hidden="true">' +
+        meta.icon +
+        "</span>" +
+        '<span class="profile-body"><span class="profile-name">' +
+        esc(meta.label) +
+        '</span><span class="profile-handle">' +
+        esc(handleFor(link.url)) +
+        "</span></span>" +
+        '<svg class="profile-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 17 17 7M9 7h8v8" /></svg></a>'
+      );
+    }
+
+    return '<li><a ' + attributes + ">" + meta.icon + esc(meta.label) + "</a></li>";
+  }
+
   function applySocialLinks(rows) {
     if (!rows.length) return;
 
-    var pills = document.querySelector(".social-pills");
+    var pills = document.querySelector('[data-content="social"]');
     if (pills) {
       pills.innerHTML = rows
         .map(function (link) {
-          var meta = labelsFor(link);
-          return (
-            '<li><a class="social-pill" href="' +
-            esc(link.url) +
-            '" target="_blank" rel="noopener noreferrer">' +
-            meta.icon +
-            "<span>" +
-            esc(meta.label) +
-            "</span></a></li>"
-          );
+          return socialItem(link, "pill");
         })
         .join("");
     }
 
-    var profiles = document.querySelectorAll("#profiles .grid");
-    var profileGrid = profiles[profiles.length - 1];
+    var profileGrid = document.querySelector('[data-content="profiles"]');
     if (profileGrid) {
       profileGrid.innerHTML = rows
         .map(function (link) {
-          var meta = labelsFor(link);
-          return (
-            '<a class="card profile-card" href="' +
-            esc(link.url) +
-            '" target="_blank" rel="noopener noreferrer" data-reveal>' +
-            '<span class="profile-icon" aria-hidden="true">' +
-            meta.icon +
-            "</span>" +
-            '<span class="profile-body"><span class="profile-name">' +
-            esc(meta.label) +
-            '</span><span class="profile-handle">' +
-            esc(handleFor(link.url)) +
-            "</span></span>" +
-            '<svg class="profile-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 17 17 7M9 7h8v8" /></svg></a>'
-          );
+          return socialItem(link, "profile");
         })
         .join("");
     }
 
-    var contactLinks = document.querySelector(".contact-links");
-    if (contactLinks) {
-      contactLinks.innerHTML = rows
+    // The contact card and the footer use the same row markup.
+    ["contact-links", "footer-links"].forEach(function (name) {
+      var host = document.querySelector('[data-content="' + name + '"]');
+      if (!host) return;
+      host.innerHTML = rows
         .map(function (link) {
-          var meta = labelsFor(link);
-          return (
-            '<li><a href="' +
-            esc(link.url) +
-            '" target="_blank" rel="noopener noreferrer">' +
-            meta.icon +
-            esc(meta.label) +
-            "</a></li>"
-          );
+          return socialItem(link, "row");
         })
         .join("");
-    }
-
-    var footerLinks = document.querySelector(".footer-links");
-    if (footerLinks) {
-      footerLinks.innerHTML = rows
-        .map(function (link) {
-          var meta = labelsFor(link);
-          return (
-            '<li><a href="' +
-            esc(link.url) +
-            '" target="_blank" rel="noopener noreferrer">' +
-            meta.icon +
-            esc(meta.label) +
-            "</a></li>"
-          );
-        })
-        .join("");
-    }
+    });
   }
 
   /* ----------------------------------- boot -------------------------------- */
@@ -584,12 +581,19 @@
       return fetchTable(QUERIES[key], controller.signal);
     });
 
-    Promise.all(requests)
+    Promise.allSettled(requests)
       .then(function (results) {
         clearTimeout(timer);
+
         var data = {};
+        var failed = [];
+
         keys.forEach(function (key, index) {
-          data[key] = results[index];
+          if (results[index].status === "fulfilled") {
+            data[key] = results[index].value;
+          } else {
+            failed.push(key);
+          }
         });
 
         var profile = Array.isArray(data.profile) ? data.profile[0] || null : null;
@@ -599,17 +603,30 @@
             return key !== "profile" && Array.isArray(data[key]) && data[key].length > 0;
           });
 
-        if (!hasContent) return; // fresh install: keep the static content
+        // Nothing published, a fresh install, or no table answered: keep the
+        // static content exactly as shipped.
+        if (!hasContent) return;
 
-        applyProfile(profile);
-        applyEducation(data.education || []);
-        applySkills(data.skills || []);
-        applyExperience(data.experience || []);
-        applyProjects(data.projects || []);
-        applyAchievements(data.achievements || []);
-        applySocialLinks(data.social_links || []);
+        if (profile) applyProfile(profile);
+        if (data.education) applyEducation(data.education);
+        if (data.skills) applySkills(data.skills);
+        if (data.experience) applyExperience(data.experience);
+        if (data.projects) applyProjects(data.projects);
+        if (data.achievements) applyAchievements(data.achievements);
+        if (data.social_links) applySocialLinks(data.social_links);
 
-        document.documentElement.setAttribute("data-content-source", "supabase");
+        document.documentElement.setAttribute(
+          "data-content-source",
+          failed.length ? "partial" : "supabase"
+        );
+
+        if (failed.length && window.console && console.warn) {
+          console.warn(
+            "[portfolio] Some Supabase tables were unavailable — those sections kept their static content.",
+            failed
+          );
+        }
+
         document.dispatchEvent(new CustomEvent("portfolio:content-updated"));
       })
       .catch(function (error) {
