@@ -42,7 +42,8 @@ Home (hero) → About → Skills → Experience → Projects → Achievements �
 - **Achievements** — cards for practice milestones and internship work, with an optional certificate
   link and year when supplied.
 - **Coding profiles** — cards generated from the published social links.
-- **Contact** — email address, profile links and a clearly labelled front-end-only demo form.
+- **Contact** — email address and GitHub / LinkedIn / LeetCode links in a two-column layout. There is
+  no contact form: the site is static, so the email link and profiles are the contact routes.
 
 ## Features
 
@@ -52,7 +53,7 @@ Home (hero) → About → Skills → Experience → Projects → Achievements �
 - **Graceful degradation** — a failed or empty Supabase response keeps the built-in static content; a
   broken image URL falls back to a concept panel (projects) or the initials portrait (hero).
 - **Accessibility** — semantic landmarks, correct heading order, visible focus states, alt text,
-  `aria-expanded` / `aria-controls` on the menu button, labelled form fields and
+  `aria-expanded` / `aria-controls` on the menu button and
   `prefers-reduced-motion` support for all reveal animations.
 - **Performance** — no libraries and no build step; one stylesheet, one small page script, one data
   layer and two images. Google Fonts (Manrope, `display=swap`) is the only external resource.
@@ -109,7 +110,7 @@ reference and are not part of the deployed page.
 PRODIGY_WD_04/
 ├── index.html              # Public page markup and fallback content
 ├── style.css               # Design system, layout and responsive rules
-├── script.js               # Navigation, scroll-spy, reveal, image fallback, form handling
+├── script.js               # Navigation, scroll-spy, reveal, image fallback
 ├── app-data.js             # Public data layer: reads published rows and renders them
 ├── config.js               # Supabase URL + publishable key
 ├── admin/
@@ -160,8 +161,8 @@ Kept explicit so nothing on the site overstates what exists:
   functionality.
 - **Experience** entries use labels ("Internship", "Ongoing") rather than date ranges.
 - **Achievements** have no dates or certificate images attached yet.
-- **Contact form** is a front-end demo only — it validates input and explains that nothing was sent;
-  the email address and profile links are the working contact routes.
+- **Contact** — no form and no message handling; the email link and profile links are the only
+  contact routes, so nothing on the page implies a message was delivered.
 
 ## Technologies
 

@@ -107,9 +107,7 @@ svg {
   height: 1em;
 }
 
-button,
-input,
-textarea {
+button {
   font: inherit;
   color: inherit;
 }
@@ -1524,45 +1522,67 @@ textarea {
 }
 
 .contact-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 22px;
-  margin-top: 24px;
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.contact-links li {
+  min-width: 0;
 }
 
 .contact-links a {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 0;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fbfbfd;
   font-size: 0.9rem;
   font-weight: 650;
   color: var(--ink-soft);
-  transition: color 0.18s ease;
+  transition: color 0.18s ease, border-color 0.18s ease, background-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .contact-links a svg {
-  width: 16px;
-  height: 16px;
+  width: 17px;
+  height: 17px;
+  flex: none;
   fill: currentColor;
 }
 
-.contact-links a:hover {
-  color: var(--accent-dark);
-  text-decoration: underline;
-  text-underline-offset: 4px;
+.contact-links a::after {
+  content: "↗";
+  margin-left: auto;
+  font-size: 0.92em;
+  color: var(--muted);
+  transition: color 0.18s ease, transform 0.18s ease;
 }
 
-.contact-form {
-  display: grid;
-  gap: 16px;
+.contact-links a:hover,
+.contact-links a:focus-visible {
+  color: var(--accent-dark);
+  border-color: var(--accent-line);
+  background: #fff;
+  box-shadow: var(--shadow-xs);
+}
+
+.contact-links a:hover::after,
+.contact-links a:focus-visible::after {
+  color: var(--accent);
+  transform: translate(1px, -1px);
+}
+
+.contact-card {
   padding: clamp(22px, 3vw, 30px);
   border-color: var(--accent-line);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
-.contact-form::before {
+.contact-card::before {
   content: "";
   position: absolute;
   inset: 0 0 auto 0;
@@ -1571,76 +1591,26 @@ textarea {
   opacity: 0.85;
 }
 
-.field {
-  display: grid;
-  gap: 6px;
-}
-
-.field label {
-  font-size: 0.84rem;
-  font-weight: 700;
-  color: var(--ink);
-  letter-spacing: -0.005em;
-}
-
-.field input,
-.field textarea {
-  width: 100%;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: #fbfbfd;
-  font-size: 0.92rem;
-  line-height: 1.55;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
-}
-
-.field textarea {
-  resize: vertical;
-  min-height: 118px;
-}
-
-.field input::placeholder,
-.field textarea::placeholder {
-  color: #a0a7b6;
-}
-
-.field input:focus,
-.field textarea:focus {
-  outline: none;
-  background: #fff;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
-}
-
-.field input:user-invalid,
-.field textarea:user-invalid {
-  border-color: #e0968e;
-  box-shadow: 0 0 0 3px rgba(217, 138, 131, 0.12);
-}
-
-.form-status {
-  font-size: 0.86rem;
-  line-height: 1.6;
-  min-height: 0;
-}
-
-.form-status.is-notice {
-  color: var(--ink-soft);
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: var(--accent-soft);
-  border: 1px solid var(--accent-line);
-}
-
-.form-status.is-error {
-  color: #b42318;
-}
-
-.form-note {
-  font-size: 0.78rem;
-  line-height: 1.6;
+.contact-card-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 750;
   color: var(--muted);
+}
+
+.contact-card-title {
+  margin-top: 6px;
+  font-size: 1.18rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.contact-card-lead {
+  margin-top: 6px;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: var(--ink-soft);
 }
 
 /* --------------------------------- Footer ------------------------------- */
@@ -2136,7 +2106,6 @@ textarea {
   .nav-toggle,
   .hero-actions,
   .social-pills,
-  .contact-form,
   .footer-top {
     display: none !important;
   }

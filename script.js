@@ -1,7 +1,7 @@
 /* ==========================================================================
    Aditya Prakash — Personal Portfolio
    Minimal vanilla JavaScript: navigation, active-section highlighting,
-   scroll reveal, image fallback and a front-end-only contact form.
+   scroll reveal and image fallback.
    ========================================================================== */
 
 (function () {
@@ -209,53 +209,4 @@
     }
   }
 
-  /* ------------------------------------------------------ Contact form --- */
-  var form = document.getElementById("contact-form");
-  var status = document.getElementById("form-status");
-
-  if (form) {
-    var fields = Array.prototype.slice.call(form.querySelectorAll("input, textarea"));
-
-    var clearFieldState = function (field) {
-      field.removeAttribute("aria-invalid");
-    };
-
-    fields.forEach(function (field) {
-      field.addEventListener("input", function () {
-        clearFieldState(field);
-        if (status) {
-          status.textContent = "";
-          status.className = "form-status";
-        }
-      });
-    });
-
-    form.addEventListener("submit", function (event) {
-      event.preventDefault();
-
-      var firstInvalid = null;
-
-      fields.forEach(function (field) {
-        if (field.checkValidity()) {
-          clearFieldState(field);
-        } else {
-          field.setAttribute("aria-invalid", "true");
-          if (!firstInvalid) firstInvalid = field;
-        }
-      });
-
-      if (!status) return;
-
-      if (firstInvalid) {
-        status.textContent = "Please fill in your name, a valid email address and a message.";
-        status.className = "form-status is-error";
-        firstInvalid.focus();
-        return;
-      }
-
-      status.textContent =
-        "This form isn't connected to a backend yet, so your message was not sent. Please reach out through LinkedIn or GitHub.";
-      status.className = "form-status is-notice";
-    });
-  }
 })();
